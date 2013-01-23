@@ -173,7 +173,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         tst     N, #15
         beq     199f
         memcpy_trailing_15bytes  backwards, unaligned
-199:    pop     {S, DAT1, DAT2, pc}
+199:    pop     {D, DAT1, DAT2, pc}
 .endm
 
 .macro memcpy_short_inner_loop  backwards, unaligned
@@ -200,7 +200,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         stmneia D!, {DAT0, DAT1, DAT2, DAT3}
  .endif
         memcpy_trailing_15bytes  backwards, unaligned
-199:    pop     {S, DAT1, DAT2, pc}
+199:    pop     {D, DAT1, DAT2, pc}
 .endm
 
 .macro memcpy backwards
@@ -217,7 +217,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         DAT3    .req    ip
         OFF     .req    lr
 
-        push    {S, DAT1, DAT2, lr}
+        push    {D, DAT1, DAT2, lr}
 
  .if backwards
         add     D, D, N
