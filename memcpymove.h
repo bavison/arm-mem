@@ -431,15 +431,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         push    {D, DAT1, DAT2, lr}
         
         sub     OFF, S, D
-        mov     DAT0, #0xC
-        and     OFF, DAT0, OFF, lsl #2
-        ldr     pc, [pc, OFF]
-        .word   0
-        .word   0f
-        .word   1f
-        .word   2f
-        .word   3f
-        
+        movs    OFF, OFF, lsl #31
+        bhi     3f
+        bcs     2f
+        bmi     1f
+        /* else drop through... */
 0:      memcpy_at_align backwards, 0
 1:      memcpy_at_align backwards, 1
 2:      memcpy_at_align backwards, 2
