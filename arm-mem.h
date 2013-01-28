@@ -29,11 +29,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .macro myfunc fname
  .func fname
  .global fname
- /* For ELF format also set function visibility to hidden */
-#ifdef __ELF__
-// .hidden fname
-// .type fname, %function
-#endif
 fname:
 .endm
 

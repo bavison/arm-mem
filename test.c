@@ -213,7 +213,16 @@ int main(int argc, char *argv[])
                     memset(l1bufb, 0, sizeof l1bufb);
                     mymemcpy(l1bufb+j, l1bufa+i, len);
                     if (memcmp(l1bufb+j, l1bufa+i, len) != 0)
+                    {
                         printf("memcpy failed (data: %u %u %u)\n", i, j, len);
+                        printf("should be");
+                        for (size_t x = 0; x < len; x++)
+                            printf(" %02X%s", l1bufa[i+x] & 0xFF, l1bufa[i+x] != l1bufb[j+x] ? "*" : "");
+                        printf("\nbut is   ");
+                        for (size_t x = 0; x < len; x++)
+                            printf(" %02X%s", l1bufb[j+x] & 0xFF, l1bufa[i+x] != l1bufb[j+x] ? "*" : "");
+                        printf("\n");
+                    }
                     else if (mymemcmp(l1bufb+j, l1bufa+i, len) != 0)
                         printf("memcmp failed (%u %u %u)\n", i, j, len);
                     if (memcmp(l1bufb, l2bufa, j) != 0)
