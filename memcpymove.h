@@ -208,6 +208,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .endm
 
 .macro memcpy_long_inner_loop  backwards, align
+ .if align != 0
+  .if backwards
+        ldr     DAT0, [S, #-align]!
+  .else
+        ldr     LAST, [S, #-align]!
+  .endif
+ .endif
 110:
  .if align == 0
   .if backwards
@@ -251,11 +258,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  .endif
         memcpy_trailing_15bytes  backwards, align
 199:
- .if align == 0
-        pop     {DAT3, DAT4, DAT5, DAT6}
- .else
         pop     {DAT3, DAT4, DAT5, DAT6, DAT7}
- .endif
         pop     {D, DAT1, DAT2, pc}
 .endm
 
@@ -320,7 +323,23 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         pop     {D, DAT1, DAT2, pc}
 .endm
 
-.macro memcpy_at_align backwards, align
+.macro memcpy backwards
+        D       .req    a1
+        S       .req    a2
+        N       .req    a3
+        DAT0    .req    a4
+        DAT1    .req    v1
+        DAT2    .req    v2
+        DAT3    .req    v3
+        DAT4    .req    v4
+        DAT5    .req    v5
+        DAT6    .req    v6
+        DAT7    .req    sl
+        LAST    .req    ip
+        OFF     .req    lr
+
+        push    {D, DAT1, DAT2, lr}
+        
  .if backwards
         add     D, D, N
         add     S, S, N
@@ -334,11 +353,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         blo     160f
 
         /* Long case */
- .if align == 0
-        push    {DAT3, DAT4, DAT5, DAT6}
- .else
         push    {DAT3, DAT4, DAT5, DAT6, DAT7}
- .endif
         /* Adjust N so that the decrement instruction can also test for
          * inner loop termination. We want it to stop when there are
          * (prefetch_distance+1) complete blocks to go. */
@@ -357,25 +372,25 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         rsb     DAT2, DAT2, #16 /* number of leading bytes until destination aligned */
  .endif
         preload_leading_step2  backwards, DAT0, S, DAT2, OFF
-        memcpy_leading_15bytes backwards, align
+        memcpy_leading_15bytes backwards, 1
 154:    /* Destination now 16-byte aligned; we have at least one prefetch as well as at least one 16-byte output block */
- .if align != 0
-  .if backwards
-        ldr     DAT0, [S, #-align]!
-  .else
-        ldr     LAST, [S, #-align]!
-  .endif
- .endif
         /* Prefetch offset is best selected such that it lies in the first 8 of each 32 bytes - but it's just as easy to aim for the first one */
  .if backwards
-        rsb     OFF, S, #0
-        and     OFF, OFF, #31
+        rsb     OFF, S, #3
+        and     OFF, OFF, #28
         sub     OFF, OFF, #32*(prefetch_distance+1)
  .else
-        and     OFF, S, #31
+        and     OFF, S, #28
         rsb     OFF, OFF, #32*prefetch_distance
  .endif
-        memcpy_long_inner_loop  backwards, align
+        movs    DAT0, S, lsl #31
+        bhi     157f
+        bcs     156f
+        bmi     155f
+        memcpy_long_inner_loop  backwards, 0
+155:    memcpy_long_inner_loop  backwards, 1
+156:    memcpy_long_inner_loop  backwards, 2
+157:    memcpy_long_inner_loop  backwards, 3
 
 160:    /* Medium case */
         preload_all  backwards, 0, 0, S, N, DAT2, OFF
@@ -390,7 +405,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  .endif
         memcpy_leading_15bytes backwards, align
 164:    /* Destination now 16-byte aligned; we have at least one 16-byte output block */
-        memcpy_medium_inner_loop  backwards, align
+        tst     S, #3
+        bne     140f
+        memcpy_medium_inner_loop  backwards, 0
+140:    memcpy_medium_inner_loop  backwards, 1
         
 170:    /* Short case, less than 31 bytes, so no guarantee of at least one 16-byte block */
         teq     N, #0
@@ -410,37 +428,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         tst     D, #3
         bne     172b
 174:    /* Destination now 4-byte aligned; we have 0 or more output bytes to go */
-        memcpy_short_inner_loop  backwards, align
-.endm
-
-.macro memcpy backwards
-        D       .req    a1
-        S       .req    a2
-        N       .req    a3
-        DAT0    .req    a4
-        DAT1    .req    v1
-        DAT2    .req    v2
-        DAT3    .req    v3
-        DAT4    .req    v4
-        DAT5    .req    v5
-        DAT6    .req    v6
-        DAT7    .req    sl
-        LAST    .req    ip
-        OFF     .req    lr
-
-        push    {D, DAT1, DAT2, lr}
+        tst     S, #3
+        bne     140f
+        memcpy_short_inner_loop  backwards, 0
+140:    memcpy_short_inner_loop  backwards, 1
         
-        sub     OFF, S, D
-        movs    OFF, OFF, lsl #31
-        bhi     3f
-        bcs     2f
-        bmi     1f
-        /* else drop through... */
-0:      memcpy_at_align backwards, 0
-1:      memcpy_at_align backwards, 1
-2:      memcpy_at_align backwards, 2
-3:      memcpy_at_align backwards, 3
-
         .unreq  D
         .unreq  S
         .unreq  N
