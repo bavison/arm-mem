@@ -26,7 +26,7 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-.macro unaligned_words  backwards, align, words, r0, r1, r2, r3, r4, r5, r6, r7, r8
+.macro unaligned_words  backwards, align, use_pld, words, r0, r1, r2, r3, r4, r5, r6, r7, r8
  .if words == 1
   .if backwards
         mov     r1, r0, lsl #32-align*8
@@ -88,7 +88,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         ldmdb   S!, {r4, r5, r6, r7}
         mov     r8, r0, lsl #32-align*8
         ldmdb   S!, {r0, r1, r2, r3}
+   .if use_pld
         pld     [S, OFF]
+   .endif
         orr     r8, r8, r7, lsr #align*8
         mov     r7, r7, lsl #32-align*8
         orr     r7, r7, r6, lsr #align*8
@@ -110,7 +112,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         ldmib   S!, {r1, r2, r3, r4}
         mov     r0, r8, lsr #align*8
         ldmib   S!, {r5, r6, r7, r8}
+   .if use_pld
         pld     [S, OFF]
+   .endif
         orr     r0, r0, r1, lsl #32-align*8
         mov     r1, r1, lsr #align*8
         orr     r1, r1, r2, lsl #32-align*8
@@ -229,27 +233,43 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         stmia   D!, {DAT4, DAT5, DAT6, LAST}
   .endif
  .else
-        unaligned_words  backwards, align, 8, DAT0, DAT1, DAT2, DAT3, DAT4, DAT5, DAT6, DAT7, LAST
+        unaligned_words  backwards, align, 1, 8, DAT0, DAT1, DAT2, DAT3, DAT4, DAT5, DAT6, DAT7, LAST
  .endif
         subs    N, N, #32
         bhs     110b
         /* Just before the final (prefetch_distance+1) 32-byte blocks, deal with final preloads */
         preload_trailing  backwards, S, N, OFF
-        add     N, N, #(prefetch_distance+2)*32 - 16
+        add     N, N, #(prefetch_distance+2)*32 - 32
 120:
  .if align == 0
   .if backwards
-        ldmdb   S!, {DAT0, DAT1, DAT2, LAST}
-        stmdb   D!, {DAT0, DAT1, DAT2, LAST}
+        ldmdb   S!, {DAT0, DAT1, DAT2, DAT3, DAT4, DAT5, DAT6, LAST}
+        stmdb   D!, {DAT4, DAT5, DAT6, LAST}
+        stmdb   D!, {DAT0, DAT1, DAT2, DAT3}
   .else
-        ldmia   S!, {DAT0, DAT1, DAT2, LAST}
-        stmia   D!, {DAT0, DAT1, DAT2, LAST}
+        ldmia   S!, {DAT0, DAT1, DAT2, DAT3, DAT4, DAT5, DAT6, LAST}
+        stmia   D!, {DAT0, DAT1, DAT2, DAT3}
+        stmia   D!, {DAT4, DAT5, DAT6, LAST}
   .endif
  .else
-        unaligned_words  backwards, align, 4, DAT0, DAT1, DAT2, DAT3, LAST
+        unaligned_words  backwards, align, 0, 8, DAT0, DAT1, DAT2, DAT3, DAT4, DAT5, DAT6, DAT7, LAST
  .endif
-        subs     N, N, #16
-        bhs      120b
+        subs    N, N, #32
+        bhs     120b
+        tst     N, #16
+ .if align == 0
+  .if backwards
+        ldmnedb S!, {DAT0, DAT1, DAT2, LAST}
+        stmnedb D!, {DAT0, DAT1, DAT2, LAST}
+  .else
+        ldmneia S!, {DAT0, DAT1, DAT2, LAST}
+        stmneia D!, {DAT0, DAT1, DAT2, LAST}
+  .endif
+ .else
+        beq     130f
+        unaligned_words  backwards, align, 0, 4, DAT0, DAT1, DAT2, DAT3, LAST
+130:
+ .endif
         /* Trailing words and bytes */
         tst      N, #15
         beq      199f
