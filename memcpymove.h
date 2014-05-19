@@ -358,7 +358,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         LAST    .req    ip
         OFF     .req    lr
 
+        .cfi_startproc
+        
         push    {D, DAT1, DAT2, lr}
+        
+        .cfi_def_cfa_offset 16
+        .cfi_rel_offset D, 0
+        .cfi_undefined  S
+        .cfi_undefined  N
+        .cfi_undefined  DAT0
+        .cfi_rel_offset DAT1, 4
+        .cfi_rel_offset DAT2, 8
+        .cfi_undefined  LAST
+        .cfi_rel_offset lr, 12
         
  .if backwards
         add     D, D, N
@@ -374,6 +386,18 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
         /* Long case */
         push    {DAT3, DAT4, DAT5, DAT6, DAT7}
+        
+        .cfi_def_cfa_offset 36
+        .cfi_rel_offset D, 20
+        .cfi_rel_offset DAT1, 24
+        .cfi_rel_offset DAT2, 28
+        .cfi_rel_offset DAT3, 0
+        .cfi_rel_offset DAT4, 4
+        .cfi_rel_offset DAT5, 8
+        .cfi_rel_offset DAT6, 12
+        .cfi_rel_offset DAT7, 16
+        .cfi_rel_offset lr, 32
+        
         /* Adjust N so that the decrement instruction can also test for
          * inner loop termination. We want it to stop when there are
          * (prefetch_distance+1) complete blocks to go. */
@@ -412,6 +436,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 156:    memcpy_long_inner_loop  backwards, 2
 157:    memcpy_long_inner_loop  backwards, 3
 
+        .cfi_def_cfa_offset 16
+        .cfi_rel_offset D, 0
+        .cfi_rel_offset DAT1, 4
+        .cfi_rel_offset DAT2, 8
+        .cfi_same_value DAT3
+        .cfi_same_value DAT4
+        .cfi_same_value DAT5
+        .cfi_same_value DAT6
+        .cfi_same_value DAT7
+        .cfi_rel_offset lr, 12
+        
 160:    /* Medium case */
         preload_all  backwards, 0, 0, S, N, DAT2, OFF
         sub     N, N, #16     /* simplifies inner loop termination */
@@ -452,6 +487,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         bne     140f
         memcpy_short_inner_loop  backwards, 0
 140:    memcpy_short_inner_loop  backwards, 1
+        
+        .cfi_endproc
         
         .unreq  D
         .unreq  S
