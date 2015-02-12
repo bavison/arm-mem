@@ -1,5 +1,5 @@
-OBJS = memcmp.o memcpy.o memmove.o memset.o
-CFLAGS += -std=c99
+OBJS = memcmp.o memcpy.o memmove.o mempcpy.o memset.o
+CFLAGS += -std=c99 -O2
 
 all: libarmmem.so libarmmem.a test
 
