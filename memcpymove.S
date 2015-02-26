@@ -26,6 +26,20 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include "arm-mem.h"
+
+/* Prevent the stack from becoming executable */
+#if defined(__linux__) && defined(__ELF__)
+.section .note.GNU-stack,"",%progbits
+#endif
+
+    .text
+    .arch armv6
+    .object_arch armv4
+    .arm
+    .altmacro
+    .p2align 2
+
 .macro unaligned_words  backwards, align, use_pld, words, r0, r1, r2, r3, r4, r5, r6, r7, r8
  .if words == 1
   .if backwards
@@ -504,3 +518,54 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         .unreq  LAST
         .unreq  OFF
 .endm
+
+/*
+ * void *memcpy(void * restrict s1, const void * restrict s2, size_t n);
+ * On entry:
+ * a1 = pointer to destination
+ * a2 = pointer to source
+ * a3 = number of bytes to copy
+ * On exit:
+ * a1 preserved
+ */
+
+.set prefetch_distance, 3
+
+myfunc memcpy
+1000:   memcpy  0
+.endfunc
+
+/*
+ * void *memmove(void *s1, const void *s2, size_t n);
+ * On entry:
+ * a1 = pointer to destination
+ * a2 = pointer to source
+ * a3 = number of bytes to copy
+ * On exit:
+ * a1 preserved
+ */
+
+.set prefetch_distance, 3
+
+myfunc memmove
+        cmp     a2, a1
+        bpl     1000b   /* pl works even over -1 - 0 and 0x7fffffff - 0x80000000 boundaries */
+        memcpy  1
+.endfunc
+
+/*
+ * void *mempcpy(void * restrict s1, const void * restrict s2, size_t n);
+ * On entry:
+ * a1 = pointer to destination
+ * a2 = pointer to source
+ * a3 = number of bytes to copy
+ * On exit:
+ * a1 = pointer to immediately after destination block
+ */
+
+myfunc mempcpy
+        push    {v1, lr}
+        mov     v1, a3
+        bl      1000b
+        add     a1, a1, v1
+        pop     {v1, pc}
