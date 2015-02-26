@@ -148,8 +148,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         bhs     110b
         /* Just before the final (prefetch_distance+1) 32-byte blocks,
          * deal with final preloads */
-        preload_trailing  0, S_1, N, DAT0
-        preload_trailing  0, S_2, N, DAT0
+        preload_trailing  0, S_1, 5, N, DAT0
+        preload_trailing  0, S_2, 5, N, DAT0
         add     N, N, #(prefetch_distance+2)*32 - 16
 120:
         memcmp_process_head  unaligned
@@ -222,13 +222,13 @@ myfunc memcmp
          * inner loop termination. We want it to stop when there are
          * (prefetch_distance+1) complete blocks to go. */
         sub     N, N, #(prefetch_distance+2)*32
-        preload_leading_step1  0, DAT0, S_1
-        preload_leading_step1  0, DAT1, S_2
+        preload_leading_step1  0, DAT0, S_1, 5
+        preload_leading_step1  0, DAT1, S_2, 5
         tst     S_2, #31
         beq     154f
         rsb     OFF, S_2, #0 /* no need to AND with 15 here */
-        preload_leading_step2  0, DAT0, S_1, OFF, DAT2
-        preload_leading_step2  0, DAT1, S_2, OFF, DAT2
+        preload_leading_step2  0, DAT0, S_1, 5, OFF, DAT2
+        preload_leading_step2  0, DAT1, S_2, 5, OFF, DAT2
         memcmp_leading_31bytes
 154:    /* Second source now cacheline (32-byte) aligned; we have at
          * least one prefetch to go. */
@@ -245,8 +245,8 @@ myfunc memcmp
 170:    /* Short case */
         teq     N, #0
         beq     199f
-        preload_all 0, 0, 0, S_1, N, DAT0, DAT1
-        preload_all 0, 0, 0, S_2, N, DAT0, DAT1
+        preload_all 0, 0, 0, S_1, 5, N, DAT0, DAT1
+        preload_all 0, 0, 0, S_2, 5, N, DAT0, DAT1
         tst     S_2, #3
         beq     174f
 172:    subs    N, N, #1

@@ -252,7 +252,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         subs    N, N, #32
         bhs     110b
         /* Just before the final (prefetch_distance+1) 32-byte blocks, deal with final preloads */
-        preload_trailing  backwards, S, N, OFF
+        preload_trailing  backwards, S, 5, N, OFF
         add     N, N, #(prefetch_distance+2)*32 - 32
 120:
  .if align == 0
@@ -416,7 +416,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          * inner loop termination. We want it to stop when there are
          * (prefetch_distance+1) complete blocks to go. */
         sub     N, N, #(prefetch_distance+2)*32
-        preload_leading_step1  backwards, DAT0, S
+        preload_leading_step1  backwards, DAT0, S, 5
  .if backwards
         /* Bug in GAS: it accepts, but mis-assembles the instruction
          * ands    DAT2, D, #60, 2
@@ -429,7 +429,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         beq     154f
         rsb     DAT2, DAT2, #16 /* number of leading bytes until destination aligned */
  .endif
-        preload_leading_step2  backwards, DAT0, S, DAT2, OFF
+        preload_leading_step2  backwards, DAT0, S, 5, DAT2, OFF
         memcpy_leading_15bytes backwards, 1
 154:    /* Destination now 16-byte aligned; we have at least one prefetch as well as at least one 16-byte output block */
         /* Prefetch offset is best selected such that it lies in the first 8 of each 32 bytes - but it's just as easy to aim for the first one */
@@ -462,7 +462,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         .cfi_rel_offset lr, 12
         
 160:    /* Medium case */
-        preload_all  backwards, 0, 0, S, N, DAT2, OFF
+        preload_all  backwards, 0, 0, S, 5, N, DAT2, OFF
         sub     N, N, #16     /* simplifies inner loop termination */
  .if backwards
         ands    DAT2, D, #15
@@ -482,7 +482,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 170:    /* Short case, less than 31 bytes, so no guarantee of at least one 16-byte block */
         teq     N, #0
         beq     199f
-        preload_all  backwards, 1, 0, S, N, DAT2, LAST
+        preload_all  backwards, 1, 0, S, 5, N, DAT2, LAST
         tst     D, #3
         beq     174f
 172:    subs    N, N, #1
