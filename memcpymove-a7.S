@@ -165,7 +165,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  .endif
 .endm
 
-.macro memcpy_middle_64bytes  backwards, align, use_pld
+.macro memcpy_middle_64bytes  backwards, align, use_pld, add_nops
  .if align == 0
   .if backwards
         vldmdb  S!, {d0-d7}
@@ -175,10 +175,20 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         vstmdb  D!, {d0-d7}
   .else
         vldmia  S!, {d0-d7}
+   .if add_nops
+    .rept 14
+        nop
+    .endr
+   .endif
    .if use_pld
         pld     [S, OFF]
    .endif
         vstmia  D!, {d0-d7}
+   .if add_nops
+    .rept 7
+        nop
+    .endr
+   .endif
   .endif
  .else
   .if backwards
@@ -195,6 +205,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   .else
         vmov    s3, s19
         vldmia  S!, {d2-d9}
+   .if add_nops
+    .rept 7
+        nop
+    .endr
+   .endif
    .if use_pld
         pld     [S, OFF]
    .endif
@@ -202,7 +217,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         vext.8  q1, q1, q2, #12+align
         vext.8  q2, q2, q3, #12+align
         vext.8  q3, q3, q4, #12+align
+   .if add_nops
+        nop
+        nop
+        nop
+   .endif
         vstmia  D!, {d0-d7}
+   .if add_nops
+        nop
+        nop
+   .endif
   .endif
  .endif
 .endm
@@ -325,7 +349,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 1:
 .endm
 
-.macro memcpy_long_inner_loop  backwards, align
+.macro memcpy_long_inner_loop  backwards, align, add_nops
  .if backwards
         /* Bug in GAS: it accepts, but mis-assembles the instruction
          * ands    LEAD, D, #252, 2
@@ -364,13 +388,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         and     OFF, S, #60
         rsb     OFF, OFF, #64*prefetch_distance
  .endif
-110:    memcpy_middle_64bytes  backwards, align, 1
+110:    memcpy_middle_64bytes  backwards, align, 1, add_nops
         subs    N, N, #64
         bhs     110b
         /* Just before the final (prefetch_distance+1) 32-byte blocks, deal with final preloads */
         preload_trailing  backwards, S, 6, N, OFF
         add     N, N, #(prefetch_distance+2)*64 - 64
-120:    memcpy_middle_64bytes  backwards, align, 0
+120:    memcpy_middle_64bytes  backwards, align, 0, add_nops
         subs    N, N, #64
         bhs     120b
         /* Trailing words and bytes */
@@ -409,7 +433,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 165:    /* Destination now 64-byte aligned */
         subs    N, N, #64
         blo     129f
-120:    memcpy_middle_64bytes  backwards, align, 0
+120:    memcpy_middle_64bytes  backwards, align, 0, 0
         subs    N, N, #64
         bhs     120b
 129:    /* Trailing words and bytes */
@@ -483,7 +507,28 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  .endif
         blo     160f
 
-        /* Long case */
+ .if !backwards
+        /* If the data is not in the L2 cache, we get up to a 5% speed
+         * boost by spacing out the instructions with NOPs. Use data
+         * length to estimate whether this is the case. */
+        cmp     N, #512*1024 @ L2 cache size for BCM2836 Cortex-A7
+        blo     150f
+
+        sub     N, N, #(prefetch_distance+2)*64
+        preload_leading_step1  backwards, P, S, 6
+
+        sub     TMP, S, D
+        movs    TMP, TMP, lsl #31
+        bhi     148f
+        bcs     147f
+        bmi     146f
+        memcpy_long_inner_loop  backwards, 0, 1
+146:    memcpy_long_inner_loop  backwards, 1, 1
+147:    memcpy_long_inner_loop  backwards, 2, 1
+148:    memcpy_long_inner_loop  backwards, 3, 1
+ .endif
+
+150:    /* Long case */
         /* Adjust N so that the decrement instruction can also test for
          * inner loop termination. We want it to stop when there are
          * (prefetch_distance+1) complete blocks to go. */
@@ -495,10 +540,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         bhi     158f
         bcs     157f
         bmi     156f
-        memcpy_long_inner_loop  backwards, 0
-156:    memcpy_long_inner_loop  backwards, 1
-157:    memcpy_long_inner_loop  backwards, 2
-158:    memcpy_long_inner_loop  backwards, 3
+        memcpy_long_inner_loop  backwards, 0, 0
+156:    memcpy_long_inner_loop  backwards, 1, 0
+157:    memcpy_long_inner_loop  backwards, 2, 0
+158:    memcpy_long_inner_loop  backwards, 3, 0
 
 160:    /* Medium case */
         preload_all  backwards, 0, 0, S, 6, N, OFF, TMP
