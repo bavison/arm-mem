@@ -648,6 +648,9 @@ myfunc memmove_cortexa7
 
 myfunc mempcpy_cortexa7
 .hidden mempcpy_cortexa7
+.hidden __mempcpy_cortexa7
+.global __mempcpy_cortexa7
+__mempcpy_cortexa7:
         push    {v1, lr}
         mov     v1, a3
         bl      1000b

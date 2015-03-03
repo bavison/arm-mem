@@ -58,3 +58,4 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 DISPATCH_ON_NEON(memcpy,arm1176jzfs,cortexa7)
 DISPATCH_ON_NEON(memmove,arm1176jzfs,cortexa7)
 DISPATCH_ON_NEON(mempcpy,arm1176jzfs,cortexa7)
+DISPATCH_ON_NEON(__mempcpy,arm1176jzfs,cortexa7)

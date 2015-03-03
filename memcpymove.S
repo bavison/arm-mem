@@ -567,6 +567,9 @@ myfunc memmove_arm1176jzfs
 
 myfunc mempcpy_arm1176jzfs
 .hidden mempcpy_arm1176jzfs
+.hidden __mempcpy_arm1176jzfs
+.global __mempcpy_arm1176jzfs
+__mempcpy_arm1176jzfs:
         push    {v1, lr}
         mov     v1, a3
         bl      1000b
