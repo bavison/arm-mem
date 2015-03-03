@@ -4,20 +4,26 @@ CFLAGS += -std=c99 -O2
 
 all: libarmmem.so libarmmem.a libarmmem-a7.so libarmmem-a7.a test
 
+%.o: %.c
+	$(CROSS_COMPILE)gcc $(CFLAGS) -c -o $@ $^
+
+%.o: %.S
+	$(CROSS_COMPILE)gcc -c -o $@ $^
+
 libarmmem.so: $(OBJS)
-	$(CC) -shared -o $@ $^
+	$(CROSS_COMPILE)gcc -shared -o $@ $^
 
 libarmmem.a: $(OBJS)
-	$(AR) rcs $@ $^
+	$(CROSS_COMPILE)ar rcs $@ $^
 
 libarmmem-a7.so: $(OBJS-A7)
-	$(CC) -shared -o $@ $^
+	$(CROSS_COMPILE)gcc -shared -o $@ $^
 
 libarmmem-a7.a: $(OBJS-A7)
-	$(AR) rcs $@ $^
+	$(CROSS_COMPILE)ar rcs $@ $^
 
 test: test.o
-	$(CC) -o $@ $^
+	$(CROSS_COMPILE)gcc -o $@ $^
 
 clean:
 	rm -rf *.o *.so *.a test
