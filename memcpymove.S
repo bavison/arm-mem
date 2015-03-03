@@ -564,6 +564,8 @@ myfunc memmove
  */
 
 myfunc mempcpy
+.global __mempcpy
+__mempcpy:
         push    {v1, lr}
         mov     v1, a3
         bl      1000b
