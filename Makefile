@@ -20,4 +20,4 @@ test: test.o
 	$(CC) -o $@ $^
 
 clean:
-	rm -rf *.o *.so test
+	rm -rf *.o *.so *.a test
