@@ -1,4 +1,4 @@
-OBJS = arm-mem.o memcmp.o memcpymove.o memcpymove-a7.o memset.o
+OBJS = architecture.o arm-mem.o memcmp.o memcpymove.o memcpymove-a7.o memset.o
 CFLAGS += -std=gnu99 -O2
 
 all: libarmmem.so libarmmem.a test

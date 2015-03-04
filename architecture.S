@@ -25,25 +25,20 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#define _GNU_SOURCE /* enable mempcpy */
-#include <string.h>
+/* Grubby, but completely OS-independent and USR-mode safe way to
+ * distinguish between ARMv6 and ARMv7 platforms at runtime
+ */
 
-extern int architecture(void);
-
-#define DISPATCH_ON_V6V7(func,suffix6,suffix7)           \
-    typeof(func) func##_##suffix6;                       \
-    typeof(func) func##_##suffix7;                       \
-    asm(".type " #func ", %gnu_indirect_function");      \
-    typeof(func) *func##_dispatch(void) __asm__(#func);  \
-    typeof(func) *func##_dispatch(void)                  \
-    {                                                    \
-        if (architecture() >= 7)                         \
-            return func##_##suffix7;                     \
-        else                                             \
-            return func##_##suffix6;                     \
-    }                                                    \
-
-DISPATCH_ON_V6V7(memcpy,arm1176jzfs,cortexa7)
-DISPATCH_ON_V6V7(memmove,arm1176jzfs,cortexa7)
-DISPATCH_ON_V6V7(mempcpy,arm1176jzfs,cortexa7)
-DISPATCH_ON_V6V7(__mempcpy,arm1176jzfs,cortexa7)
+.global architecture
+.hidden architecture
+.func   architecture
+.arm
+architecture:
+        sub     pc, pc, #1  @ is an interworking branch on ARMv7, not ARMv6
+        and     a1, a4, a1  @ second word interpreted as 'B .+0xA' if Thumb
+        mov     a1, #6
+        bx      lr
+.thumb
+        mov     a1, #7
+        bx      lr
+.endfunc
