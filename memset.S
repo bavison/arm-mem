@@ -57,8 +57,9 @@ myfunc memset
         DAT2    .req    ip
         DAT3    .req    lr
 
-        orr     DAT0, DAT0, lsl #8
+        and     DAT0, DAT0, #255
         push    {S, lr}
+        orr     DAT0, DAT0, lsl #8
         orr     DAT0, DAT0, lsl #16
         mov     DAT1, DAT0
 
