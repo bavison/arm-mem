@@ -37,7 +37,7 @@ typeof(func) func##_cortexa7;                     \
 static typeof(func) func##_initial;               \
 static typeof(func) *p##func = func##_initial;    \
                                                   \
-ret_type func args_full                           \
+ret_type (func) args_full                         \
 {                                                 \
     return p##func args;                          \
 }                                                 \
