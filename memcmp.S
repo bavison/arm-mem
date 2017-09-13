@@ -162,7 +162,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         memcmp_trailing_15bytes  unaligned
 199:    /* Reached end without detecting a difference */
         mov     a1, #0
-        setend  le
         pop     {DAT1-DAT6, pc}
 .endm
 
@@ -180,7 +179,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         memcmp_trailing_15bytes  unaligned
 199:    /* Reached end without detecting a difference */
         mov     a1, #0
-        setend  le
         pop     {DAT1-DAT6, pc}
 .endm
 
@@ -211,7 +209,6 @@ myfunc memcmp
         OFF     .req    lr
 
         push    {DAT1-DAT6, lr}
-        setend  be /* lowest-addressed bytes are most significant */
 
         /* To preload ahead as we go, we need at least (prefetch_distance+2) 32-byte blocks */
         cmp     N, #(prefetch_distance+3)*32 - 1
@@ -264,9 +261,22 @@ myfunc memcmp
 140:    memcmp_short_inner_loop  1
 
 200:    /* Difference found: determine sign. */
+        rev     DAT0, DAT0
+        rev     DAT4, DAT4
+        rev     DAT1, DAT1
+        rev     DAT5, DAT5
+        rev     DAT2, DAT2
+        rev     DAT6, DAT6
+        rev     DAT3, DAT3
+        rev     DAT7, DAT7
+
+        cmp     DAT0, DAT4
+        cmpeq   DAT1, DAT5
+        cmpeq   DAT2, DAT6
+        cmpeq   DAT3, DAT7
+
         movhi   a1, #1
         movlo   a1, #-1
-        setend  le
         pop     {DAT1-DAT6, pc}
 
         .unreq  S_1
