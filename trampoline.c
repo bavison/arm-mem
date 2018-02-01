@@ -55,3 +55,4 @@ DISPATCH(void *, memcpy,   (void *__restrict __dest, __const void *__restrict __
 DISPATCH(void *, memmove,  (void *           __dest, __const void *           __src, size_t __n), (__dest, __src, __n))
 DISPATCH(void *,__mempcpy, (void *__restrict __dest, __const void *__restrict __src, size_t __n), (__dest, __src, __n))
 DISPATCH(void *, mempcpy,  (void *__restrict __dest, __const void *__restrict __src, size_t __n), (__dest, __src, __n))
+DISPATCH(void *, memset,   (void *           __s,    int                      __c,   size_t __n), (__s,    __c,   __n))

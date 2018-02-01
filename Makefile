@@ -1,4 +1,4 @@
-OBJS = architecture.o memcmp.o memcpymove.o memcpymove-a7.o memset.o trampoline.o
+OBJS = architecture.o memcmp.o memcpymove.o memcpymove-a7.o memset.o memset-a7.o trampoline.o
 CFLAGS += -std=gnu99 -O2 -fno-inline
 
 all: libarmmem.so libarmmem.a test

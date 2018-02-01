@@ -1,6 +1,5 @@
 /*
-Copyright (c) 2013, Raspberry Pi Foundation
-Copyright (c) 2013, RISC OS Open Ltd
+Copyright (c) 2018, RISC OS Open Ltd
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -34,7 +33,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
     .text
-    .arch armv6
+    .fpu neon
+    .arch armv7a
     .object_arch armv4
     .arm
     .altmacro
@@ -49,73 +49,71 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *  On exit:
  *  a1 preserved
  */
-myfunc memset_arm1176jzfs
-        S       .req    a1
-        DAT0    .req    a2
+myfunc memset_cortexa7
+        SJ      .req    a2
         N       .req    a3
-        DAT1    .req    a4
-        DAT2    .req    ip
-        DAT3    .req    lr
+        SI      .req    a4
+        OFF     .req    ip
 
-        and     DAT0, DAT0, #255
-        push    {S, lr}
-        orr     DAT0, DAT0, lsl #8
-        orr     DAT0, DAT0, lsl #16
-        mov     DAT1, DAT0
-
-        /* See if we're guaranteed to have at least one 16-byte aligned 16-byte write */
-        cmp     N, #31
+        mov     SI, a1
+        vdup.8  q0, a2
+        cmp     N, #15+64
+        vdup.8  q1, a2
         blo     170f
 
-161:    sub     N, N, #16     /* simplifies inner loop termination */
-        /* Leading words and bytes */
-        tst     S, #15
+161:    ands    ip, a1, #15
         beq     164f
-        rsb     DAT3, S, #0   /* bits 0-3 = number of leading bytes until aligned */
-        movs    DAT2, DAT3, lsl #31
-        submi   N, N, #1
-        strmib  DAT0, [S], #1
-        subcs   N, N, #2
-        strcsh  DAT0, [S], #2
-        movs    DAT2, DAT3, lsl #29
-        submi   N, N, #4
-        strmi   DAT0, [S], #4
-        subcs   N, N, #8
-        stmcsia S!, {DAT0, DAT1}
-164:    /* Delayed set up of DAT2 and DAT3 so we could use them as scratch registers above */
-        mov     DAT2, DAT0
-        mov     DAT3, DAT0
-        /* Now the inner loop of 16-byte stores */
-165:    stmia   S!, {DAT0, DAT1, DAT2, DAT3}
-        subs    N, N, #16
+        rsb     ip, ip, #16   /* number of leading bytes until 16-byte aligned */
+        sub     N, N, ip
+        rbit    ip, ip
+        tst     a1, #1        /* bit 0 unaffected by rsb so can avoid register interlock */
+        strneb  a2, [SI], #1
+        movs    ip, ip, lsl #2
+        strcsb  a2, [SI, #1]
+        strcsb  a2, [SI], #2
+        vstmmi  SI!, {s0}
+        movs    ip, ip, lsl #2
+        vstmcs  SI!, {d0}
+164:    /* Setup for the inner loop */
+        mov     OFF, #64
+        sub     N, N, #64     /* simplifies inner loop termination */
+        add     SJ, SI, #32
+        /* Now the inner loop of 2x32-byte stores */
+165:    vst1.8  {q0-q1}, [SI :128], OFF
+        subs    N, N, #64
+        vst1.8  {q0-q1}, [SJ :128], OFF
         bhs     165b
-166:    /* Trailing words and bytes */
-        movs    N, N, lsl #29
-        stmcsia S!, {DAT0, DAT1}
-        strmi   DAT0, [S], #4
+        /* Trailing words and bytes */
+166:    vmov.32 a2, d0[0]
+        movs    N, N, lsl #27
+        bcc     167f
+        vst1.8  {q0-q1}, [SI]!
+167:    bpl     168f
+        vst1.8  {q0}, [SI]!
+168:    movs    N, N, lsl #2
+        vstmcs  SI!, {d0}
+        strmi   a2, [SI], #4
         movs    N, N, lsl #2
-        strcsh  DAT0, [S], #2
-        strmib  DAT0, [S]
-199:    pop     {S, pc}
+        strcsh  a2, [SI], #2
+        strmib  a2, [SI]
+199:    bx      lr
 
 170:    /* Short case */
-        mov     DAT2, DAT0
-        mov     DAT3, DAT0
-        tst     S, #3
+        tst     SI, #3
         beq     174f
 172:    subs    N, N, #1
         blo     199b
-        strb    DAT0, [S], #1
-        tst     S, #3
+        strb    a2, [SI], #1
+        tst     SI, #3
         bne     172b
-174:    tst     N, #16
-        stmneia S!, {DAT0, DAT1, DAT2, DAT3}
+174:    cmp     N, #32
+        bcc     166b
+        vst1.8  {q0-q1}, [SI]!
+        sub     N, N, #32
         b       166b
 
-        .unreq  S
-        .unreq  DAT0
+        .unreq  SJ
         .unreq  N
-        .unreq  DAT1
-        .unreq  DAT2
-        .unreq  DAT3
+        .unreq  SI
+        .unreq  OFF
 .endfunc
