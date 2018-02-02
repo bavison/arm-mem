@@ -49,7 +49,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *  On exit:
  *  a1 preserved
  */
-myfunc memset_cortexa7
+myfunc memset
         SJ      .req    a2
         N       .req    a3
         SI      .req    a4

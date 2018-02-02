@@ -612,8 +612,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 .set prefetch_distance, 2
 
-myfunc memcpy_cortexa7
-.hidden memcpy_cortexa7
+myfunc memcpy
 1000:   memcpy  0
 .endfunc
 
@@ -629,8 +628,7 @@ myfunc memcpy_cortexa7
 
 .set prefetch_distance, 2
 
-myfunc memmove_cortexa7
-.hidden memmove_cortexa7
+myfunc memmove
         cmp     a2, a1
         bpl     1000b   /* pl works even over -1 - 0 and 0x7fffffff - 0x80000000 boundaries */
         memcpy  1
@@ -646,11 +644,9 @@ myfunc memmove_cortexa7
  * a1 = pointer to immediately after destination block
  */
 
-myfunc mempcpy_cortexa7
-.hidden mempcpy_cortexa7
-.hidden __mempcpy_cortexa7
-.global __mempcpy_cortexa7
-__mempcpy_cortexa7:
+myfunc mempcpy
+.global __mempcpy
+__mempcpy:
         push    {v1, lr}
         mov     v1, a3
         bl      1000b

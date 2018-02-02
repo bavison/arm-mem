@@ -49,7 +49,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *  On exit:
  *  a1 preserved
  */
-myfunc memset_arm1176jzfs
+myfunc memset
         S       .req    a1
         DAT0    .req    a2
         N       .req    a3

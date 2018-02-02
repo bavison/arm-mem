@@ -531,8 +531,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 .set prefetch_distance, 3
 
-myfunc memcpy_arm1176jzfs
-.hidden memcpy_arm1176jzfs
+myfunc memcpy
 1000:   memcpy  0
 .endfunc
 
@@ -548,8 +547,7 @@ myfunc memcpy_arm1176jzfs
 
 .set prefetch_distance, 3
 
-myfunc memmove_arm1176jzfs
-.hidden memmove_arm1176jzfs
+myfunc memmove
         cmp     a2, a1
         bpl     1000b   /* pl works even over -1 - 0 and 0x7fffffff - 0x80000000 boundaries */
         memcpy  1
@@ -565,11 +563,9 @@ myfunc memmove_arm1176jzfs
  * a1 = pointer to immediately after destination block
  */
 
-myfunc mempcpy_arm1176jzfs
-.hidden mempcpy_arm1176jzfs
-.hidden __mempcpy_arm1176jzfs
-.global __mempcpy_arm1176jzfs
-__mempcpy_arm1176jzfs:
+myfunc mempcpy
+.global __mempcpy
+__mempcpy:
         push    {v1, lr}
         mov     v1, a3
         bl      1000b
