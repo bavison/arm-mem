@@ -104,6 +104,22 @@ static uint32_t bench_R(CANDIDATE_RETURN_TYPE (*test)(), char *a, char *b, size_
     return total;
 }
 
+static uint32_t bench_RW(CANDIDATE_RETURN_TYPE (*test)(), char *a, char *b, size_t w, size_t times)
+{
+    uint32_t total = 0;
+    int i;
+
+    srand (0);
+    for (i = times; i >= 0; i--)
+    {
+        int ax = (rand() % (MEGABYTE - 1024));
+        int bx = (rand() % (MEGABYTE - 1024));
+        test(a + ax, b + bx, w);
+        total += w;
+    }
+    return total;
+}
+
 static uint32_t bench_RT(CANDIDATE_RETURN_TYPE (*test)(), char *a, char *b, size_t times)
 {
     uint32_t total = 0;
@@ -170,11 +186,21 @@ int main(int argc, char *argv[])
             memset(l1bufa+d, 0xA5, n);
             mymemset(l1bufa+d, 0x5A, n);
             if (memcmp(l1bufa, l1bufb, sizeof l1bufa) != 0)
-                printf("memset failed with d = %d, n = %d\n", d, n);
+            {
+                printf("memset failed (insufficient) with d = %d, n = %d\n", d, n);
+                for (int x = 0; x < sizeof l1bufa; x++)
+                    if (l1bufa[x] != 0x5A)
+                        printf("Offset %d is wrong\n", x);
+            }
             mymemset(l1bufa+d, 0xA5, n);
             memset(l1bufa+d, 0x5A, n);
             if (memcmp(l1bufa, l1bufb, sizeof l1bufa) != 0)
-                printf("memset failed with d = %d, n = %d\n", d, n);
+            {
+                printf("memset failed (excessive) with d = %d, n = %d\n", d, n);
+                for (int x = 0; x < sizeof l1bufa; x++)
+                    if (l1bufa[x] != 0x5A)
+                        printf("Offset %d is wrong\n", x);
+            }
         }
     }
 
@@ -343,6 +369,34 @@ int main(int argc, char *argv[])
         t3 = gettime();
         printf("%6.2f\n", ((double)byte_cnt) / ((t3 - t2) - (t2 - t1)));
         fflush(stdout);
+    }
+#elif 0
+    const char *sep = "";
+    for (int w = 1; w <= 100; w++)
+    {
+        printf("%sW%d", sep, w);
+        sep = ", ";
+    }
+    printf("\n");
+
+    while (iterations--)
+    {
+        sep = "";
+        for (int w = 1; w <= 100; w++)
+        {
+            memcpy(membufa, membufb, sizeof membufa);
+            memcpy(membufb, membufa, sizeof membufa);
+
+            t1 = gettime();
+            bench_RW(control, membufa, membufb, w, TESTSIZE / w);
+            t2 = gettime();
+            byte_cnt = bench_RW(CANDIDATE, membufa, membufb, w, TESTSIZE / w);
+            t3 = gettime();
+            printf("%s%6.2f", sep, ((double)byte_cnt) / ((t3 - t2) - (t2 - t1)));
+            sep = ", ";
+            fflush(stdout);
+        }
+        printf("\n");
     }
 #endif
 }
