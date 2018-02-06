@@ -1,8 +1,8 @@
-OBJS = memcmp.o memcpymove.o memset.o
-OBJS-A7 = memcmp.o memcpymove-a7.o memset-a7.o
+OBJS-V6L = memcmp.o memcpymove-v6l.o memset-v6l.o
+OBJS-V7L = memcmp.o memcpymove-v7l.o memset-v7l.o
 CFLAGS += -std=gnu99 -O2 -fno-inline
 
-all: libarmmem.so libarmmem.a libarmmem-a7.so libarmmem-a7.a test
+all: libarmmem-v6l.so libarmmem-v6l.a libarmmem-v7l.so libarmmem-v7l.a test
 
 %.o: %.c
 	$(CROSS_COMPILE)gcc $(CFLAGS) -c -o $@ $^
@@ -10,16 +10,16 @@ all: libarmmem.so libarmmem.a libarmmem-a7.so libarmmem-a7.a test
 %.o: %.S
 	$(CROSS_COMPILE)gcc -c -o $@ $^
 
-libarmmem.so: $(OBJS)
+libarmmem-v6l.so: $(OBJS-V6L)
 	$(CROSS_COMPILE)gcc -shared -o $@ $^
 
-libarmmem.a: $(OBJS)
+libarmmem-v6l.a: $(OBJS-V6L)
 	$(CROSS_COMPILE)ar rcs $@ $^
 
-libarmmem-a7.so: $(OBJS-A7)
+libarmmem-v7l.so: $(OBJS-V7L)
 	$(CROSS_COMPILE)gcc -shared -o $@ $^
 
-libarmmem-a7.a: $(OBJS-A7)
+libarmmem-v7l.a: $(OBJS-V7L)
 	$(CROSS_COMPILE)ar rcs $@ $^
 
 test: test.o
