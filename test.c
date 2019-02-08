@@ -139,16 +139,18 @@ static uint32_t bench_RT(CANDIDATE_RETURN_TYPE (*test)(), char *a, char *b, size
 
 int main(int argc, char *argv[])
 {
-    char l1bufa[L1CACHESIZE/2-KILOBYTE];
-    char l1bufb[L1CACHESIZE/2-KILOBYTE];
-    char l2bufa[L2CACHESIZE/2-KILOBYTE];
-    char l2bufb[L2CACHESIZE/2-KILOBYTE];
-    char membufa[MEGABYTE];
-    char membufb[MEGABYTE];
+    static __attribute__((aligned(32))) char l1bufa[L1CACHESIZE/2-KILOBYTE];
+    static __attribute__((aligned(32))) char l1bufb[L1CACHESIZE/2-KILOBYTE];
+    static __attribute__((aligned(32))) char l2bufa[L2CACHESIZE/2-KILOBYTE];
+    static __attribute__((aligned(32))) char l2bufb[L2CACHESIZE/2-KILOBYTE];
+    static __attribute__((aligned(32))) char membufa[MEGABYTE];
+    static __attribute__((aligned(32))) char membufb[MEGABYTE];
     size_t s, d, n;
     uint64_t t1, t2, t3;
     uint32_t byte_cnt;
     size_t iterations;
+
+    srand(0);
 
     if (argc != 2)
     {
@@ -251,6 +253,8 @@ int main(int argc, char *argv[])
             for (size_t j = 0; j < 64; j++)
                 for (size_t len = 0; len < 2048; len++)
                 {
+                    int myresult;
+                    int trueresult;
                     memset(l1bufb, 0, sizeof l1bufb);
                     mymemcpy(l1bufb+j, l1bufa+i, len);
                     if (memcmp(l1bufb+j, l1bufa+i, len) != 0)
@@ -264,28 +268,43 @@ int main(int argc, char *argv[])
                             printf(" %02X%s", l1bufb[j+x] & 0xFF, l1bufa[i+x] != l1bufb[j+x] ? "*" : "");
                         printf("\n");
                     }
-                    else if (mymemcmp(l1bufb+j, l1bufa+i, len) != 0)
-                        printf("memcmp failed (%u %u %u)\n", i, j, len);
+                    else if ((myresult = mymemcmp(l1bufb+j, l1bufa+i, len)) != 0)
+                    {
+                        printf("memcmp failed (%u %u %u) was %08x (%c0), should be =0\n", i, j, len, myresult, "<=>"[SIGNOF(myresult) + 1]);
+                        myresult = mymemcmp(l1bufb+j, l1bufa+i, len);
+                    }
                     for (size_t k = 0; k + 1 < len && k + 1 < 20; k++)
                     {
                         size_t k2 = len - 2 - k;
                         l1bufb[j+k] ^= 0x80;
                         l1bufb[j+k+1] ^= 0x80;
 
-                        if (SIGNOF(mymemcmp(l1bufb+j, l1bufa+i, len)) != SIGNOF(memcmp(l1bufb+j, l1bufa+i, len)))
-                            printf("memcmp failed (%u %u %u with diff at %u was %c0, should be %c0\n",
+                        myresult = mymemcmp(l1bufb+j, l1bufa+i, len);
+                        trueresult = memcmp(l1bufb+j, l1bufa+i, len);
+                        if (SIGNOF(myresult) != SIGNOF(trueresult))
+                        {
+                            printf("memcmp failed (%u %u %u with diff at %u was %08x (%c0), should be %c0\n",
                                     i, j, len, k,
-                                    "<=>"[SIGNOF(mymemcmp(l1bufb+j, l1bufa+i, len)) + 1],
-                                    "<=>"[SIGNOF(memcmp(l1bufb+j, l1bufa+i, len)) + 1]);
+                                    myresult,
+                                    "<=>"[SIGNOF(myresult) + 1],
+                                    "<=>"[SIGNOF(trueresult) + 1]);
+                            myresult = mymemcmp(l1bufb+j, l1bufa+i, len);
+                        }
                         l1bufb[j+k] ^= 0x80;
                         l1bufb[j+k+1] ^= 0x80;
                         l1bufb[j+k2] ^= 0x80;
                         l1bufb[j+k2+1] ^= 0x80;
-                        if (SIGNOF(mymemcmp(l1bufb+j, l1bufa+i, len)) != SIGNOF(memcmp(l1bufb+j, l1bufa+i, len)))
-                            printf("memcmp failed (%u %u %u with diff at %u was %c0, should be %c0\n",
+                        myresult = mymemcmp(l1bufb+j, l1bufa+i, len);
+                        trueresult = memcmp(l1bufb+j, l1bufa+i, len);
+                        if (SIGNOF(myresult) != SIGNOF(trueresult))
+                        {
+                            printf("memcmp failed (%u %u %u with diff at %u was %08x (%c0), should be %c0\n",
                                     i, j, len, k2,
-                                    "<=>"[SIGNOF(mymemcmp(l1bufb+j, l1bufa+i, len)) + 1],
-                                    "<=>"[SIGNOF(memcmp(l1bufb+j, l1bufa+i, len)) + 1]);
+                                    myresult,
+                                    "<=>"[SIGNOF(myresult) + 1],
+                                    "<=>"[SIGNOF(trueresult) + 1]);
+                            myresult = mymemcmp(l1bufb+j, l1bufa+i, len);
+                        }
                         l1bufb[j+k2] ^= 0x80;
                         l1bufb[j+k2+1] ^= 0x80;
                     }

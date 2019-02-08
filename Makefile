@@ -1,5 +1,5 @@
-OBJS-V6L = memcmp.o memcpymove-v6l.o memset-v6l.o
-OBJS-V7L = memcmp.o memcpymove-v7l.o memset-v7l.o
+OBJS-V6L = memcmp-v6l.o memcpymove-v6l.o memset-v6l.o
+OBJS-V7L = memcmp-v7l.o memcpymove-v7l.o memset-v7l.o
 CFLAGS += -std=gnu99 -O2 -fno-inline
 
 all: libarmmem-v6l.so libarmmem-v6l.a libarmmem-v7l.so libarmmem-v7l.a test
