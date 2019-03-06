@@ -198,7 +198,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 .set prefetch_distance, 63
 
-myfunc memcmp
+myfunc neon_memcmp
         RES     .req    a1
         S_2     .req    a2
         N       .req    a3
