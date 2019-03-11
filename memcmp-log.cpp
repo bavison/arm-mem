@@ -30,14 +30,14 @@ static void myatexit(void)
 
     for (auto it = by_freq.rbegin(); it != by_freq.rend(); it++)
     {
-        /* The invocation of addr2line appears to call memcmp once; avoid recursion by filtering these out */
-        if (it->first > 1)
+        /* The invocation of eu-addr2line appears to call memcmp twice; avoid recursion by filtering these out */
+        if (it->first > 2)
         {
             char cmd[1024];
             printf("%u calls from:\n", it->first);
             snprintf(cmd, 1024, "awk '{split($1,range,\"-\"); if (range[1] <= \"%08x\" && \"%08x\" < range[2]) print $6 }' /proc/%d/maps", it->second, it->second, getpid());
             system(cmd);
-            snprintf(cmd, 1024, "addr2line -C -e /proc/%d/exe -f %p", getpid(), it->second);
+            snprintf(cmd, 1024, "eu-addr2line -C -p %d -f %p", getpid(), it->second);
             system(cmd);
         }
     }
