@@ -76,9 +76,9 @@ myfunc strlen
         vmov        TMP2, s2
         vmov        TMP3, s3
         teq         TMP0, #0
-        teqne       TMP1, #0
-        teqne       TMP2, #0
-        teqne       TMP3, #0
+        teqeq       TMP1, #0
+        teqeq       TMP2, #0
+        teqeq       TMP3, #0
         bne         33f
         vld1.8      {d0,d1}, [PTR :64]!
         bics        TMP0, MASK, PTR
@@ -90,9 +90,9 @@ myfunc strlen
         vmov        TMP2, s2
         vmov        TMP3, s3
         teq         TMP0, #0
-        teqne       TMP1, #0
-        teqne       TMP2, #0
-        teqne       TMP3, #0
+        teqeq       TMP1, #0
+        teqeq       TMP2, #0
+        teqeq       TMP3, #0
         bne         33f
         /* Drop through... */
 
