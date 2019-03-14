@@ -294,16 +294,16 @@ myfunc memcmp
         vmov        a1, a2, d0
         cmpeq       lr, v2
         vmov        a3, a4, d2
-        movne       RES, #0x7fffffff
+        movne       RES, #1
         vmov        v1, v2, d1
         bne         32f
         vmov        ip, lr, d3
         cmp         a3, a1
         cmpeq       a4, a2
-        mov         RES, #0x7fffffff
+        mov         RES, #1
         cmpeq       ip, v1
         cmpeq       lr, v2
-32:     adc         RES, #0
+32:     subcs       RES, #2
         pop         {v1,v2,pc}
 
 33:     // Diff found in q8-q11
@@ -322,16 +322,16 @@ myfunc memcmp
         vmov        a1, a2, d0
         cmpeq       lr, v2
         vmov        a3, a4, d2
-        movne       RES, #0x7fffffff
+        movne       RES, #1
         vmov        v1, v2, d1
         bne         34f
         vmov        ip, lr, d3
         cmp         a3, a1
         cmpeq       a4, a2
-        mov         RES, #0x7fffffff
+        mov         RES, #1
         cmpeq       ip, v1
         cmpeq       lr, v2
-34:     adc         RES, #0
+34:     subcs       RES, #2
         pop         {v1,v2,pc}
 
 41:     mov         RES, TMP2
@@ -412,17 +412,17 @@ myfunc memcmp
         vmov        a1, a2, d0
         cmpeq       lr, v2
         vmov        a3, a4, d2
-        movne       RES, #0x7fffffff
+        movne       RES, #1
         vmov        v1, v2, d1
         bne         32f
         vmov        ip, lr, d3
         cmp         a3, a1
         cmpeq       a4, a2
-        mov         RES, #0x7fffffff
+        mov         RES, #1
         cmpeq       ip, v1
         cmpeq       lr, v2
 32:     vpop        {q4}
-        adc         RES, #0
+        subcs       RES, #2
         pop         {v1-v3,pc}
 
 33:     // Diff found in q8-q11
@@ -440,17 +440,17 @@ myfunc memcmp
         vmov        a1, a2, d0
         cmpeq       lr, v2
         vmov        a3, a4, d2
-        movne       RES, #0x7fffffff
+        movne       RES, #1
         vmov        v1, v2, d1
         bne         34f
         vmov        ip, lr, d3
         cmp         a3, a1
         cmpeq       a4, a2
-        mov         RES, #0x7fffffff
+        mov         RES, #1
         cmpeq       ip, v1
         cmpeq       lr, v2
 34:     vpop        {q4}
-        adc         RES, #0
+        subcs       RES, #2
         pop         {v1-v3,pc}
 
 41:     mov         RES, TMP2
