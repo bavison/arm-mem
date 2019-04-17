@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2015, RISC OS Open Ltd
+Copyright (c) 2019, RISC OS Open Ltd
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -40,564 +40,158 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     .altmacro
     .p2align 2
 
-.macro memcpy_leading_63bytes  backwards, align
-        movs    TMP, LEAD, lsl #31
-        bpl     1f
- .if backwards
-        sub     S, S, #1
-        sub     D, D, #1
-        vld1.8  {d7[7]}, [S]
-        vst1.8  {d7[7]}, [D]
- .else
-        vld1.8  {d7[7]}, [S]!
-        vst1.8  {d7[7]}, [D]!
- .endif
-1:      bcc     1f
- .if backwards
-  .if align == 0 || align == 2
-        sub     S, S, #2
-        sub     D, D, #2
-        vld1.16 {d7[3]}, [S :16]
-  .else
-        sub     S, S, #1
-        sub     D, D, #2
-        vld1.8  {d7[7]}, [S]
-        sub     S, S, #1
-        vld1.8  {d7[6]}, [S]
-  .endif
-        vst1.16 {d7[3]}, [D :16]
- .else
-  .if align == 0 || align == 2
-        vld1.16 {d7[3]}, [S :16]!
-  .else
-        vld1.8  {d7[6]}, [S]!
-        vld1.8  {d7[7]}, [S]!
-  .endif
-        vst1.16 {d7[3]}, [D :16]!
- .endif
-1:
- .if align == 0
-        movs    TMP, LEAD, lsl #29
-  .if backwards
-        vldmdbmi S!, {s13}
-        vldmdbcs S!, {d7}
-        vstmdbmi D!, {s13}
-        vstmdbcs D!, {d7}
-  .else
-        vldmiami S!, {s13}
-        vldmiacs S!, {d7}
-        vstmiami D!, {s13}
-        vstmiacs D!, {d7}
-  .endif
-        movs    TMP, LEAD, lsl #27
-  .if backwards
-        vldmdbmi S!, {d2-d3}
-        vldmdbcs S!, {d4-d7}
-        vstmdbmi D!, {d2-d3}
-        vstmdbcs D!, {d4-d7}
-  .else
-        vldmiami S!, {d2-d3}
-        vldmiacs S!, {d4-d7}
-        vstmiami D!, {d2-d3}
-        vstmiacs D!, {d4-d7}
-  .endif
- .else
-  .if backwards
-        add     S, S, #4-align
-        vldmdb  S!, {s0}
-  .else
-        sub     S, S, #align
-        vldmia  S!, {s19}
-  .endif
-        movs    TMP, LEAD, lsl #29
-        bpl     1f
-  .if backwards
-        vmov    s1, s0
-        vldmdb  S!, {s0}
-        vext.8  d1, d0, d1, #align
-        vstmdb  D!, {s2}
-  .else
-        vmov    s18, s19
-        vldmia  S!, {s19}
-        vext.8  d8, d9, d10, #align
-        vstmia  D!, {s16}
-  .endif
-1:      bcc     1f
-  .if backwards
-        vmov    s2, s0
-        vldmdb  S!, {d0}
-        vext.8  d1, d0, d1, #align
-        vstmdb  D!, {d1}
-  .else
-        vmov    s17, s19
-        vldmia  S!, {d9}
-        vext.8  d8, d8, d9, #4+align
-        vstmia  D!, {d8}
-  .endif
-1:      movs    TMP, LEAD, lsl #27
-        bpl     1f
-  .if backwards
-        vmov    s4, s0
-        vldmdb  S!, {d0-d1}
-        vext.8  q1, q0, q1, #align
-        vstmdb  D!, {d2-d3}
-  .else
-        vmov    s15, s19
-        vldmia  S!, {d8-d9}
-        vext.8  q3, q3, q4, #12+align
-        vstmia  D!, {d6-d7}
-  .endif
-1:      bcc     1f
-  .if backwards
-        vmov    s8, s0
-        vldmdb  S!, {d0-d3}
-        vext.8  q2, q1, q2, #align
-        vext.8  q1, q0, q1, #align
-        vstmdb  D!, {d2-d5}
-  .else
-        vmov    s11, s19
-        vldmia  S!, {d6-d9}
-        vext.8  q2, q2, q3, #12+align
-        vext.8  q3, q3, q4, #12+align
-        vstmia  D!, {d4-d7}
-  .endif
-1:
- .endif
-.endm
-
-.macro memcpy_middle_64bytes  backwards, align, use_pld, add_nops
- .if align == 0
-  .if backwards
-        vldmdb  S!, {d0-d7}
-   .if use_pld
-        pld     [S, OFF]
-   .endif
-        vstmdb  D!, {d0-d7}
-  .else
-        vldmia  S!, {d0-d7}
-   .if add_nops
-    .rept 14
-        nop
-    .endr
-   .endif
-   .if use_pld
-        pld     [S, OFF]
-   .endif
-        vstmia  D!, {d0-d7}
-   .if add_nops
-    .rept 7
-        nop
-    .endr
-   .endif
-  .endif
- .else
-  .if backwards
-        vmov    s16, s0
-        vldmdb  S!, {d0-d7}
-   .if use_pld
-        pld     [S, OFF]
-   .endif
-        vext.8  q4, q3, q4, #align
-        vext.8  q3, q2, q3, #align
-        vext.8  q2, q1, q2, #align
-        vext.8  q1, q0, q1, #align
-        vstmdb  D!, {d2-d9}
-  .else
-        vmov    s3, s19
-        vldmia  S!, {d2-d9}
-   .if add_nops
-    .rept 7
-        nop
-    .endr
-   .endif
-   .if use_pld
-        pld     [S, OFF]
-   .endif
-        vext.8  q0, q0, q1, #12+align
-        vext.8  q1, q1, q2, #12+align
-        vext.8  q2, q2, q3, #12+align
-        vext.8  q3, q3, q4, #12+align
-   .if add_nops
-        nop
-        nop
-        nop
-   .endif
-        vstmia  D!, {d0-d7}
-   .if add_nops
-        nop
-        nop
-   .endif
-  .endif
- .endif
-.endm
-
-.macro memcpy_trailing_63bytes  backwards, align
-        movs    TMP, N, lsl #27
- .if align == 0
-  .if backwards
-        vldmdbcs S!, {d4-d7}
-        vldmdbmi S!, {d2-d3}
-        vstmdbcs D!, {d4-d7}
-        vstmdbmi D!, {d2-d3}
-  .else
-        vldmiacs S!, {d4-d7}
-        vldmiami S!, {d2-d3}
-        vstmiacs D!, {d4-d7}
-        vstmiami D!, {d2-d3}
-  .endif
-        movs    TMP, N, lsl #29
-  .if backwards
-        vldmdbcs S!, {d7}
-        vldmdbmi S!, {s13}
-        vstmdbcs D!, {d7}
-        vstmdbmi D!, {s13}
-  .else
-        vldmiacs S!, {d7}
-        vldmiami S!, {s13}
-        vstmiacs D!, {d7}
-        vstmiami D!, {s13}
-  .endif
- .else
-        bcc     1f
-  .if backwards
-        vmov    s8, s0
-        vldmdb  S!, {d0-d3}
-        vext.8  q2, q1, q2, #align
-        vext.8  q1, q0, q1, #align
-        vstmdb  D!, {d2-d5}
-  .else
-        vmov    s11, s19
-        vldmia  S!, {d6-d9}
-        vext.8  q2, q2, q3, #12+align
-        vext.8  q3, q3, q4, #12+align
-        vstmia  D!, {d4-d7}
-  .endif
-1:      bpl     1f
-  .if backwards
-        vmov    s4, s0
-        vldmdb  S!, {d0-d1}
-        vext.8  q1, q0, q1, #align
-        vstmdb  D!, {d2-d3}
-  .else
-        vmov    s15, s19
-        vldmia  S!, {d8-d9}
-        vext.8  q3, q3, q4, #12+align
-        vstmia  D!, {d6-d7}
-  .endif
-1:      movs    TMP, N, lsl #29
-        bcc     1f
-  .if backwards
-        vmov    s2, s0
-        vldmdb  S!, {d0}
-        vext.8  d1, d0, d1, #align
-        vstmdb  D!, {d1}
-  .else
-        vmov    s17, s19
-        vldmia  S!, {d9}
-        vext.8  d8, d8, d9, #4+align
-        vstmia  D!, {d8}
-  .endif
-1:      bpl     1f
-  .if backwards
-        vmov    s1, s0
-        vldmdb  S!, {s0}
-        vext.8  d1, d0, d1, #align
-        vstmdb  D!, {s2}
-1:      add     S, S, #align
-  .else
-        vmov    s18, s19
-        vldmia  S!, {s19}
-        vext.8  d8, d9, d10, #align
-        vstmia  D!, {s16}
-1:      sub     S, S, #4-align
-  .endif
- .endif
-        movs    TMP, N, lsl #31
-        bcc     1f
- .if backwards
-  .if align == 0 || align == 2
-        sub     S, S, #2
-        sub     D, D, #2
-        vld1.16 {d7[3]}, [S :16]
-  .else
-        sub     S, S, #1
-        sub     D, D, #2
-        vld1.8  {d7[7]}, [S]
-        sub     S, S, #1
-        vld1.8  {d7[6]}, [S]
-  .endif
-        vst1.16 {d7[3]}, [D :16]
- .else
-  .if align == 0 || align == 2
-        vld1.16 {d7[3]}, [S :16]!
-  .else
-        vld1.8  {d7[6]}, [S]!
-        vld1.8  {d7[7]}, [S]!
-  .endif
-        vst1.16 {d7[3]}, [D :16]!
- .endif
-1:      bpl     1f
- .if backwards
-        sub     S, S, #1
-        sub     D, D, #1
-        vld1.8  {d7[7]}, [S]
-        vst1.8  {d7[7]}, [D]
- .else
-        vld1.8  {d7[7]}, [S]!
-        vst1.8  {d7[7]}, [D]!
- .endif
-1:
-.endm
-
-.macro memcpy_long_inner_loop  backwards, align, add_nops
- .if backwards
-        /* Bug in GAS: it accepts, but mis-assembles the instruction
-         * ands    LEAD, D, #252, 2
-         * which sets LEAD to the number of leading bytes until destination is aligned and also clears C (sets borrow)
-         */
-        .word   0xE210C1FC
-        beq     154f
- .else
-        ands    LEAD, D, #63
-        beq     154f
-        rsb     LEAD, LEAD, #64 /* number of leading bytes until destination aligned */
- .endif
-        preload_leading_step2  backwards, P, S, 6, LEAD, TMP
-        memcpy_leading_63bytes backwards, align
-        sub     N, N, LEAD
- .if align != 0
-        b       155f
- .endif
-154:
- .if align != 0
-  .if backwards
-        add     S, S, #4-align
-        vldmdb  S!, {s0}
-  .else
-        sub     S, S, #align
-        vldmia  S!, {s19}
-  .endif
- .endif
-155:    /* Destination now 64-byte aligned; we have at least one prefetch as well as at least one 64-byte output block */
-        /* Prefetch offset is best selected such that it lies in the first 16 of each 64 bytes - but it's just as easy to aim for the first one */
- .if backwards
-        rsb     OFF, S, #0
-        and     OFF, OFF, #60
-        sub     OFF, OFF, #64*(prefetch_distance+1)
- .else
-        and     OFF, S, #60
-        rsb     OFF, OFF, #64*prefetch_distance
- .endif
-110:    memcpy_middle_64bytes  backwards, align, 1, add_nops
-        subs    N, N, #64
-        bhs     110b
-        /* Just before the final (prefetch_distance+1) 32-byte blocks, deal with final preloads */
-        preload_trailing  backwards, S, 6, N, OFF
-        add     N, N, #(prefetch_distance+2)*64 - 64
-120:    memcpy_middle_64bytes  backwards, align, 0, add_nops
-        subs    N, N, #64
-        bhs     120b
-        /* Trailing words and bytes */
-        tst      N, #63
-        beq      199f
-        memcpy_trailing_63bytes  backwards, align
-199:
-        vpop    {d8-d9}
-        pop     {a1,pc}
-.endm
-
-.macro memcpy_medium_inner_loop  backwards, align
- .if backwards
-        ands    LEAD, D, #63
-        beq     164f
- .else
-        ands    LEAD, D, #63
-        beq     164f
-        rsb     LEAD, LEAD, #64
- .endif
-        memcpy_leading_63bytes backwards, align
-        sub     N, N, LEAD
- .if align != 0
-        b       165f
- .endif
-164:
- .if align != 0
-  .if backwards
-        add     S, S, #4-align
-        vldmdb  S!, {s0}
-  .else
-        sub     S, S, #align
-        vldmia  S!, {s19}
-  .endif
- .endif
-165:    /* Destination now 64-byte aligned */
-        subs    N, N, #64
-        blo     129f
-120:    memcpy_middle_64bytes  backwards, align, 0, 0
-        subs    N, N, #64
-        bhs     120b
-129:    /* Trailing words and bytes */
-        tst      N, #63
-        beq      199f
-        memcpy_trailing_63bytes  backwards, align
-199:
-        vpop    {d8-d9}
-        pop     {a1,pc}
-.endm
-
-.macro memcpy_short_inner_loop  backwards, align
- .if align != 0
-  .if backwards
-        add     S, S, #4-align
-        vldmdb  S!, {s0}
-  .else
-        sub     S, S, #align
-        vldmia  S!, {s19}
-  .endif
- .endif
-        memcpy_trailing_63bytes  backwards, align
-199:
-        vpop    {d8-d9}
-        pop     {a1,pc}
-.endm
-
-.macro memcpy backwards
-        D       .req    a1
-        S       .req    a2
+        D_1     .req    a1
+        S_1     .req    a2
         N       .req    a3
-        P       .req    a4
-        LEAD    .req    ip
-        OFF     .req    ip
-        TMP     .req    lr
+        D_2     .req    a4
+        S_2     .req    v1
+        OFF1    .req    ip
+        OFF2    .req    lr
 
-        .cfi_startproc
+.macro label string, number
+__label \string, %number
+.endm
 
-        push    {a1,lr}
-        vpush   {d8-d9}
+.macro __label string, number
+\string\number\():
+.endm
 
-        .cfi_def_cfa_offset 16
-        .cfi_rel_offset D, 8
-        .cfi_undefined  S
+.macro labelref string, number
+__labelref \string, %number
+.endm
+
+.macro __labelref string, number
+       .word   \string\number - 00b - 4
+.endm
+
+.macro memcpy_fw  align
+ .if align == 0
+        push    {a1, lr}
+        .cfi_def_cfa_offset 8
+        .cfi_rel_offset D_1, 0
+        .cfi_rel_offset OFF2, 4
+ .else
+        push    {a1, v1, lr}
+        .cfi_def_cfa_offset 12
+        .cfi_rel_offset D_1, 0
+        .cfi_rel_offset S_2, 4
+        .cfi_rel_offset OFF2, 8
+ .endif
+        .cfi_undefined  S_1
         .cfi_undefined  N
-        .cfi_undefined  P
-        .cfi_undefined  LEAD
-        .cfi_rel_offset lr, 12
+        ands    ip, D_1, #15
+        beq     10f
 
-        add     ip, D, N
-        /* See if we cross a 64-byte boundary at the destination */
- .if backwards
-        /* Also point S and D at the buffer ends if working downwards */
-        eor     D, ip, D
-        add     S, S, N
-        bics    D, D, #63
-        mov     D, ip
-        beq     170f
+        // Leading 1..15 bytes
+        rsb     ip, #16
+        sub     N, ip
+        lsls    lr, ip, #31
+        ldrmib  lr, [S_1], #1
+        strmib  lr, [D_1], #1
+        ldrcsh  lr, [S_1], #2
+        strcsh  lr, [D_1], #2
+        lsls    lr, ip, #29
+        ldrmi   lr, [S_1], #4
+        strmi   lr, [D_1], #4
+        bcc     10f
+        vld1.8  {d0}, [S_1]!
+        vst1.32 {d0}, [D_1 :64]!
+
+        // Align destination to cacheline
+10:     subs    N, #16
+        bmi     12f
+11:     tst     D_1, #48
+        beq     12f
+        vld1.8  {d0-d1}, [S_1]!
+        subs    N, #16
+        vst1.32 {d0-d1}, [D_1 :128]!
+        bpl     11b
+12:
+
+ .if align == 0
+        // Middle n * 32 bytes
+        subs    N, #32-16
+        bmi     14f
+13:     vld1.32 {d0-d3}, [S_1 :64]!
+        subs    N, #32
+        vst1.32 {d0-d3}, [D_1 :256]!
+        bpl     13b
+
+        // Trailing 0..31 bytes
+14:     lsls    N, #27
+        beq     19f
+
  .else
-        eor     ip, ip, D
-        bics    ip, ip, #63
-        beq     170f
- .endif
+        // Middle n * 64 bytes
+        sub     S_1, #align
+        add     D_2, D_1, #16
+        add     S_2, S_1, #16
+        mov     OFF1, #16
+        mov     OFF2, #32
+        vld1.32 {d16}, [S_1 :64]!
+        subs     N, #64-16
+        bmi     14f
+13:     vld1.32 {d1}, [S_1 :64], OFF1
+        vld1.32 {d2}, [S_2 :64], OFF1
+        vld1.32 {d3}, [S_1 :64], OFF1
+        subs    N, #64
+        vld1.32 {d4}, [S_2 :64], OFF1
+        vext.8  d0, d16, d1, #align
+        vld1.32 {d5}, [S_1 :64], OFF1
+        vext.8  d1, d1, d2, #align
+        vld1.32 {d6}, [S_2 :64], OFF1
+        vext.8  d2, d2, d3, #align
+        vld1.32 {d7}, [S_1 :64], OFF1
+        vext.8  d3, d3, d4, #align
+        vld1.32 {d16}, [S_2 :64], OFF1
+        vext.8  d4, d4, d5, #align
+        vst1.32 {q0}, [D_1 :128], OFF2
+        vext.8  d5, d5, d6, #align
+        vst1.32 {q1}, [D_2 :128], OFF2
+        vext.8  d6, d6, d7, #align
+        vst1.32 {q2}, [D_1 :128], OFF2
+        vext.8  d7, d7, d16, #align
+        vst1.32 {q3}, [D_2 :128], OFF2
+        bpl     13b
 
-        /* To preload ahead as we go, we need at least (prefetch_distance+2) 64-byte blocks */
- .if prefetch_distance > 1
-        movw    ip, #(prefetch_distance+3)*64 - 1
-        cmp     N, ip
+        // Trailing 0..63 bytes
+14:     tst     N, #63
+        beq     19f
+        lsls    N, #27
+        bcc     15f
+        vld1.32 {d5}, [S_1 :64], OFF1
+        vld1.32 {d6}, [S_2 :64], OFF1
+        vmov    d0, d16
+        vld1.32 {d7}, [S_1 :64], OFF1
+        vld1.32 {d16}, [S_2 :64], OFF1
+        vext.8  d4, d0, d5, #align
+        vext.8  d5, d5, d6, #align
+        vst1.32 {q2}, [D_1 :128], OFF2
+        vext.8  d6, d6, d7, #align
+        vext.8  d7, d7, d16, #align
+        vst1.32 {q3}, [D_2 :128], OFF2
+15:     add     S_1, #align - 8
+ .endif
+        bpl     16f
+        vld1.8  {d0-d1}, [S_1]!
+        vst1.32 {d0-d1}, [D_1 :128]!
+16:     lsls    N, #2
+        bcc     17f
+        vld1.8  {d0}, [S_1]!
+        vst1.32 {d0}, [D_1 :64]!
+17:     ldrmi   lr, [S_1], #4
+        strmi   lr, [D_1], #4
+        lsls    N, #2
+        ldrcsh  lr, [S_1], #2
+        strcsh  lr, [D_1], #2
+        ldrmib  lr, [S_1]
+        strmib  lr, [D_1]
+19:
+ .if align == 0
+        pop     {a1, pc}
  .else
-        cmp     N, #(prefetch_distance+3)*64 - 1
+        pop     {a1, v1, pc}
  .endif
-        blo     160f
-
- .if !backwards
-        /* If the data is not in the L2 cache, we get up to a 5% speed
-         * boost by spacing out the instructions with NOPs. Use data
-         * length to estimate whether this is the case. */
-        cmp     N, #512*1024 @ L2 cache size for BCM2836 Cortex-A7
-        blo     150f
-
-        sub     N, N, #(prefetch_distance+2)*64
-        preload_leading_step1  backwards, P, S, 6
-
-        sub     TMP, S, D
-        movs    TMP, TMP, lsl #31
-        bhi     148f
-        bcs     147f
-        bmi     146f
-        memcpy_long_inner_loop  backwards, 0, 1
-146:    memcpy_long_inner_loop  backwards, 1, 1
-147:    memcpy_long_inner_loop  backwards, 2, 1
-148:    memcpy_long_inner_loop  backwards, 3, 1
- .endif
-
-150:    /* Long case */
-        /* Adjust N so that the decrement instruction can also test for
-         * inner loop termination. We want it to stop when there are
-         * (prefetch_distance+1) complete blocks to go. */
-        sub     N, N, #(prefetch_distance+2)*64
-        preload_leading_step1  backwards, P, S, 6
-
-        sub     TMP, S, D
-        movs    TMP, TMP, lsl #31
-        bhi     158f
-        bcs     157f
-        bmi     156f
-        memcpy_long_inner_loop  backwards, 0, 0
-156:    memcpy_long_inner_loop  backwards, 1, 0
-157:    memcpy_long_inner_loop  backwards, 2, 0
-158:    memcpy_long_inner_loop  backwards, 3, 0
-
-160:    /* Medium case */
-        preload_all  backwards, 0, 0, S, 6, N, OFF, TMP
-
-        sub     TMP, S, D
-        movs    TMP, TMP, lsl #31
-        bhi     168f
-        bcs     167f
-        bmi     166f
-        memcpy_medium_inner_loop  backwards, 0
-166:    memcpy_medium_inner_loop  backwards, 1
-167:    memcpy_medium_inner_loop  backwards, 2
-168:    memcpy_medium_inner_loop  backwards, 3
-
-170:    /* Short case, less than 127 bytes, so no guarantee of at least one 64-byte block */
-        teq     N, #0
-        beq     199f
-        preload_all  backwards, 1, 0, S, 6, N, OFF, TMP
-
-        tst     D, #3
-        beq     174f
-172:    subs    N, N, #1
-        blo     199f
- .if backwards
-        sub     S, S, #1
-        sub     D, D, #1
-        vld1.8  {d7[7]}, [S]
-        vst1.8  {d7[7]}, [D]
- .else
-        vld1.8  {d7[7]}, [S]!
-        vst1.8  {d7[7]}, [D]!
- .endif
-        tst     D, #3
-        bne     172b
-174:    /* Destination now 4-byte aligned; we have 1 or more output bytes to go */
-        sub     TMP, S, D
-        movs    TMP, TMP, lsl #31
-        bhi     178f
-        bcs     177f
-        bmi     176f
-        memcpy_short_inner_loop  backwards, 0
-176:    memcpy_short_inner_loop  backwards, 1
-177:    memcpy_short_inner_loop  backwards, 2
-178:    memcpy_short_inner_loop  backwards, 3
-
-        .cfi_endproc
-
-        .unreq  D
-        .unreq  S
-        .unreq  N
-        .unreq  P
-        .unreq  LEAD
-        .unreq  OFF
-        .unreq  TMP
 .endm
 
 /*
@@ -610,11 +204,205 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * a1 preserved
  */
 
-.set prefetch_distance, 2
-
 myfunc memcpy
-1000:   memcpy  0
+1000:
+        .cfi_startproc
+        .cfi_undefined  D_2
+        .cfi_undefined  OFF1
+        add     ip, D_1, N
+        sub     a4, S_1, D_1
+        eor     ip, D_1
+        and     a4, #7
+        bics    ip, #15
+        beq     20f
+        ldr     ip, [pc, a4, lsl #2]
+        add     pc, ip
+ 00:
+ .set align, 0
+ .rept 8
+        labelref .Lfw, align
+ .set align, align + 1
+ .endr
+
+ .set align, 0
+ .rept 8
+        label .Lfw, align
+        memcpy_fw  align
+ .set align, align + 1
+ .endr
+
+        // Short case: 0..15 bytes, arbitrary alignment
+20:     push    {a1, lr}
+        .cfi_def_cfa_offset 8
+        .cfi_rel_offset D_1, 0
+        .cfi_rel_offset OFF2, 4
+        tst     D_1, #3
+        beq     22f
+21:     subs    N, #1
+        bmi     29f
+        ldrb    a4, [S_1], #1
+        add     ip, D_1, #1
+        tst     ip, #3
+        strb    a4, [D_1], #1
+        bne     21b
+22:     lsls    N, #29
+        bcc     23f
+        vld1.8  {d0}, [S_1]!
+        vst1.8  {d0}, [D_1]!
+23:     ldrmi   lr, [S_1], #4
+        strmi   lr, [D_1], #4
+        lsls    N, #2
+        ldrcsh  lr, [S_1], #2
+        strcsh  lr, [D_1], #2
+        ldrmib  lr, [S_1]
+        strmib  lr, [D_1]
+29:     pop     {a1, pc}
+        .cfi_endproc
+
 .endfunc
+
+
+.macro memcpy_bw  align
+ .if align != 0
+        push    {v1}
+        .cfi_def_cfa_offset 12
+        .cfi_rel_offset D_1, 0
+        .cfi_rel_offset S_2, 4
+        .cfi_rel_offset OFF2, 8
+ .endif
+        .cfi_undefined  N
+        ands    ip, D_1, #15
+        beq     10f
+
+        // Leading 1..15 bytes
+        sub     N, ip
+        lsls    lr, ip, #31
+        ldrmib  lr, [S_1, #-1]!
+        strmib  lr, [D_1, #-1]!
+        ldrcsh  lr, [S_1, #-2]!
+        strcsh  lr, [D_1, #-2]!
+        lsls    lr, ip, #29
+        ldrmi   lr, [S_1, #-4]!
+        strmi   lr, [D_1, #-4]!
+        bcc     10f
+        sub     S_1, #8
+        sub     D_1, #8
+        vld1.8  {d0}, [S_1]
+        vst1.32 {d0}, [D_1 :64]
+
+        // Align destination to cacheline
+10:     sub     S_1, #16
+        sub     D_2, D_1, #16
+        subs    N, #16
+        bmi     12f
+        mov     OFF1, #-16
+11:     tst     D_1, #48
+        beq     12f
+        vld1.8  {d0-d1}, [S_1], OFF1
+        sub     D_1, #16
+        vst1.32 {d0-d1}, [D_2 :128], OFF1
+        subs    N, #16
+        bpl     11b
+12:
+
+ .if align == 0
+        // Middle n * 32 bytes
+        mov     OFF1, #-32
+        sub     S_1, #32-16
+        sub     D_1, #32
+        subs    N, #32-16
+        bmi     14f
+13:     vld1.32 {d0-d3}, [S_1 :64], OFF1
+        subs    N, #32
+        vst1.32 {d0-d3}, [D_1 :256], OFF1
+        bpl     13b
+
+        // Trailing 0..31 bytes
+14:     add     S_1, #32
+        add     D_1, #32
+        lsls    N, #27
+        beq     19f
+
+ .else
+        // Middle n * 64 bytes
+        sub     D_1, #16
+        sub     S_1, #align - 16
+        sub     D_2, D_1, #16
+        sub     S_2, S_1, #8 + 8
+        mov     OFF1, #-16
+        mov     OFF2, #-32
+        vld1.32 {d1}, [S_1]
+        sub     S_1, #8
+        subs    N, #64-16
+        bmi     14f
+13:     vld1.32 {d16}, [S_1 :64], OFF1
+        vld1.32 {d7}, [S_2 :64], OFF1
+        vld1.32 {d6}, [S_1 :64], OFF1
+        subs    N, #64
+        vld1.32 {d5}, [S_2 :64], OFF1
+        vext.8  d17, d16, d1, #align
+        vld1.32 {d4}, [S_1 :64], OFF1
+        vext.8  d16, d7, d16, #align
+        vld1.32 {d3}, [S_2 :64], OFF1
+        vext.8  d7, d6, d7, #align
+        vld1.32 {d2}, [S_1 :64], OFF1
+        vext.8  d6, d5, d6, #align
+        vld1.32 {d1}, [S_2 :64], OFF1
+        vext.8  d5, d4, d5, #align
+        vst1.32 {q8}, [D_1 :128], OFF2
+        vext.8  d4, d3, d4, #align
+        vst1.32 {q3}, [D_2 :128], OFF2
+        vext.8  d3, d2, d3, #align
+        vst1.32 {q2}, [D_1 :128], OFF2
+        vext.8  d2, d1, d2, #align
+        vst1.32 {q1}, [D_2 :128], OFF2
+        bpl     13b
+
+        // Trailing 0..63 bytes
+14:     tst     N, #63
+        beq     19f
+        lsls    N, #27
+        bcc     15f
+        vld1.32 {d4}, [S_1 :64], OFF1
+        vld1.32 {d3}, [S_2 :64], OFF1
+        vmov    d16, d1
+        vld1.32 {d2}, [S_1 :64], OFF1
+        vld1.32 {d1}, [S_2 :64], OFF1
+        vext.8  d5, d4, d16, #align
+        vext.8  d4, d3, d4, #align
+        vst1.32 {q2}, [D_1 :128], OFF2
+        vext.8  d3, d2, d3, #align
+        vext.8  d2, d1, d2, #align
+        vst1.32 {q1}, [D_2 :128], OFF2
+15:     add     D_1, #16
+        add     S_1, #8 + align
+ .endif
+        bpl     16f
+        sub     S_1, #16
+        sub     D_1, #16
+        vld1.8  {d0-d1}, [S_1]
+        vst1.32 {d0-d1}, [D_1 :128]
+16:     lsls    N, #2
+        bcc     17f
+        sub     S_1, #8
+        sub     D_1, #8
+        vld1.8  {d0}, [S_1]
+        vst1.32 {d0}, [D_1 :64]
+17:     ldrmi   lr, [S_1, #-4]!
+        strmi   lr, [D_1, #-4]!
+        lsls    N, #2
+        ldrcsh  lr, [S_1, #-2]!
+        strcsh  lr, [D_1, #-2]!
+        ldrmib  lr, [S_1, #-1]
+        strmib  lr, [D_1, #-1]
+19:
+ .if align == 0
+        mov     a1, v1
+        pop     {v1, pc}
+ .else
+        pop     {a1, v1, pc}
+ .endif
+.endm
 
 /*
  * void *memmove(void *s1, const void *s2, size_t n);
@@ -626,13 +414,76 @@ myfunc memcpy
  * a1 preserved
  */
 
-.set prefetch_distance, 2
-
 myfunc memmove
+        .cfi_startproc
+        .cfi_undefined  D_2
+        .cfi_undefined  OFF1
         cmp     a2, a1
         bpl     1000b   /* pl works even over -1 - 0 and 0x7fffffff - 0x80000000 boundaries */
-        memcpy  1
+        push    {v1, lr}
+        .cfi_def_cfa_offset 8
+        .cfi_rel_offset S_2, 0
+        .cfi_rel_offset OFF2, 4
+        mov     v1, a1
+        add     ip, D_1, N
+        sub     a4, S_1, D_1
+        eor     D_1, ip, D_1
+        .cfi_undefined  D_1
+        and     a4, #7
+        bics    D_1, #15
+        mov     D_1, ip
+        add     S_1, N
+        .cfi_undefined  S_1
+        beq     20f
+        ldr     ip, [pc, a4, lsl #2]
+        add     pc, ip
+ 00:
+ .set align, 0
+ .rept 8
+        labelref .Lbw, align
+ .set align, align + 1
+ .endr
+
+ .set align, 0
+ .rept 8
+        label .Lbw, align
+        memcpy_bw  align
+ .set align, align + 1
+ .endr
+
+        // Short case: 0..15 bytes, arbitrary alignment
+        .cfi_def_cfa_offset 8
+        .cfi_undefined  D_1
+        .cfi_rel_offset S_2, 0
+        .cfi_rel_offset OFF2, 4
+20:     tst     D_1, #3
+        beq     22f
+21:     subs    N, #1
+        bmi     29f
+        ldrb    a4, [S_1, #-1]!
+        sub     ip, D_1, #1
+        tst     ip, #3
+        strb    a4, [D_1, #-1]!
+        bne     21b
+22:     lsls    N, #29
+        bcc     23f
+        sub     S_1, #8
+        sub     D_1, #8
+        vld1.8  {d0}, [S_1]
+        vst1.8  {d0}, [D_1]
+23:     ldrmi   lr, [S_1, #-4]!
+        strmi   lr, [D_1, #-4]!
+        lsls    N, #2
+        ldrcsh  lr, [S_1, #-2]!
+        strcsh  lr, [D_1, #-2]!
+        ldrmib  lr, [S_1, #-1]
+        strmib  lr, [D_1, #-1]
+29:     mov     a1, v1
+        pop     {v1, pc}
+        .cfi_endproc
+
 .endfunc
+
 
 /*
  * void *mempcpy(void * restrict s1, const void * restrict s2, size_t n);
@@ -647,8 +498,14 @@ myfunc memmove
 myfunc mempcpy
 .global __mempcpy
 __mempcpy:
+        .cfi_startproc
         push    {v1, lr}
+        .cfi_def_cfa_offset 8
+        .cfi_rel_offset v1, 0
+        .cfi_rel_offset lr, 4
         mov     v1, a3
         bl      1000b
         add     a1, a1, v1
         pop     {v1, pc}
+        .cfi_endproc
+.endfunc
