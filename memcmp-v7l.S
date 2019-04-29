@@ -226,16 +226,16 @@ myfunc memcmp
         teq         RES, #0
         beq         9f
         sub         N, RES
-1:      subs        TMP2, TMP1, TMP2
+1:      cmp         TMP1, TMP2
         ldrb        TMP1, [S_1], #1
         bne         41f
         ldrb        TMP2, [S_2], #1
         subs        RES, #1
         bne         1b
-9:      subs        RES, TMP1, TMP2
-        bne         42f
+9:      cmp         TMP1, TMP2
+        bne         41f
         teq         N, #0
-        beq         42f // because ut's very common to have found a match by now
+        beq         43f // because it's very common to have found a match by now
 
         tst         S_1, #7
         bne         50f
@@ -334,8 +334,9 @@ myfunc memcmp
 34:     subcs       RES, #2
         pop         {v1,v2,pc}
 
-41:     mov         RES, TMP2
-42:     pop         {pc}
+41:     movcc       RES, #-1
+        movcs       RES, #1
+        pop         {pc}
 
 43:     mov         RES, #0
         pop         {pc}
@@ -453,10 +454,6 @@ myfunc memcmp
         subcs       RES, #2
         pop         {v1-v3,pc}
 
-41:     mov         RES, TMP2
-42:     vpop        {q4}
-        pop         {v1-v3,pc}
-
-43:     mov         RES, #0
-        vpop        {q4}
+43:     vpop        {q4}
+        mov         RES, #0
         pop         {v1-v3,pc}
